@@ -1,5 +1,6 @@
 #!/bin/bash -e
 
+export PROJID=$1
 basedir=$(pwd)
 export DSPACES_ROOT=${basedir}/install/dspaces
 mkdir -p install/dspaces
@@ -13,4 +14,4 @@ cd ../src
 make
 cd ..
 
-envsubst '${DSPACES_ROOT}' < run/job.tmpl > run/job.sh
+envsubst '${DSPACES_ROOT} ${PROJID}' < run/job.tmpl > run/job.sh
