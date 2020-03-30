@@ -1,0 +1,22 @@
+#!/bin/bash
+# Begin LSF directives
+#BSUB -P 
+#BSUB -J test
+#BSUB -o tst.o%J
+#BSUB -W 00:30
+#BSUB -nnodes 3
+
+export PATH=$PATH:${DSPACES_ROOT}/bin:../src
+
+rm -f conf.*
+
+jsrun -n 1 -a 1 -r 1 -c 1 dataspaces_server -s 1
+
+while [ ! -f conf.0 ]; do
+    sleep 1s
+done
+
+jsrun -n 1 -a 1 -r 1 -c 1 put &
+jsrun -n 1 -a 1 -r 1 -c 1 get &
+
+wait
