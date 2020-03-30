@@ -7,6 +7,9 @@
 #include <stdint.h>
 #include <time.h>
 #include <unistd.h>
+
+#include "common.h"
+
 #include "dataspaces.h"
 #include "mpi.h"
 

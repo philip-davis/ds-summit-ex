@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+
+#include "common.h"
+
 #include "dataspaces.h"
 #include "mpi.h"
 
