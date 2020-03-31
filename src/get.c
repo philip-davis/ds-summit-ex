@@ -55,6 +55,7 @@ int main(int argc, char **argv)
         ub = dataupper;
 
         for(timestep = 0; timestep < numts; timestep++) {
+                //printf("Rank %d: timestep: %d, datarange = %d\n", rank, timestep, datarange);
                 wait_for_event("put_data", &gcomm);
     
                 // Define the dimensionality of the data to be received 
