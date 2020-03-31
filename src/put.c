@@ -18,12 +18,44 @@ int main(int argc, char **argv)
         int err;
         int nprocs, rank;
         MPI_Comm gcomm;
+        int timestep;
+        int datalower, dataupper, datarange;
+        uint64_t lb, ub;
+        char var_name[128];
+        int *data = NULL;
+        int i;
+        int totaldata, numts;
+
+        srand(time(NULL));
 
         MPI_Init(&argc, &argv);
         MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        MPI_Barrier(MPI_COMM_WORLD);
         gcomm = MPI_COMM_WORLD;
+
+        if(argc != 3) {
+            printf("Usage: put <data_size> <num_timesteps>\n");
+            return(1);
+        }
+
+        totaldata = atoi(argv[1]);
+        numts = atoi(argv[2]);
+
+        data_decomp(totaldata, rank, nprocs, &datalower, &dataupper);
+        datarange = (dataupper-datalower) + 1;
+        if(datalower <= dataupper) {
+            data = malloc(sizeof(*data) * datarange);
+        }
+        lb = datalower;
+        ub = dataupper;
+
+        if(rank == 0) {
+            printf("Writing %d integers across %d ranks for %d timesteps.\n", 
+                        totaldata, nprocs, numts);
+        }
+
+        //Name the Data that will be writen
+        sprintf(var_name, "ex_sample_data");
 
         // Initalize DataSpaces
         // # of Peers, Application ID, ptr MPI comm, additional parameters
@@ -31,55 +63,27 @@ int main(int argc, char **argv)
         // Application ID: Unique idenitifier (integer) for application
         // Pointer to the MPI Communicator, allows DS Layer to use MPI barrier func
         // Addt'l parameters: Placeholder for future arguments, currently NULL.
-        dspaces_init(1, 1, &gcomm, NULL);
-
-        int timestep=0;
-
-        while(timestep<10){
-                timestep++;
-                sleep(2);
-                // DataSpaces: Lock Mechanism
-                // Usage: Prevent other process from modifying 
-                //        data at the same time as ours
-                dspaces_lock_on_write("my_test_lock", &gcomm);
-
-                //Name the Data that will be writen
-                char var_name[128];
-                sprintf(var_name, "ex1_sample_data");
-
-                // Create integer array, size 3
-                int *data = malloc(3*sizeof(int));
-
-                // Initialize Random Number Generator
-                srand(time(NULL));
-
+        dspaces_init(nprocs, 1, &gcomm, NULL);
+        
+        for(timestep = 0; timestep < numts; timestep++) {        
                 // Populate data array with random values from 0 to 99
-                data[0] = rand()%100;
-                data[1] = rand()%100;
-                data[2] = rand()%100;
-
-                printf("Timestep %d: put data %d %d %d\n",
-                        timestep, data[0], data[1], data[2]);
-
-                // ndim: Dimensions for application data domain
-                // In this case, our data array is 1 dimensional
-                int ndim = 1;
-
-                // Prepare LOWER and UPPER bound dimensions
-                // In this example, we will put all data into a 
-                // small box at the origin upper bound = lower bound = (0,0,0)
-                // In further examples, we will expand this concept.
-                uint64_t lb[3] = {0}, ub[3] = {0};
+                for(i = 0; i < datarange; i++) {
+                    data[i] =  rand() % 100;
+                    printf("Rank %d: Timestep %d: put data[%d] = %d\n", 
+                            rank, timestep, i + datalower, data[i]);
+                }
 
                 // DataSpaces: Put data array into the space
                 // Usage: dspaces_put(Name of variable, version num, 
                 // size (in bytes of each element), dimensions for bounding box,
                 // lower bound coordinates, upper bound coordinates,
                 // ptr to data buffer 
-                dspaces_put(var_name, timestep, 3*sizeof(int), ndim, lb, ub, data);
-
-                // DataSpaces: Release our lock on the data
-                dspaces_unlock_on_write("my_test_lock", &gcomm);
+                int ndim = 1;
+                if(data) {
+                    dspaces_put(var_name, timestep, sizeof(*data), ndim, 
+                                            &lb, &ub, data);
+                }
+                send_event("put_data", &gcomm);
         }
 
         // DataSpaces: Finalize and clean up DS process
@@ -87,6 +91,8 @@ int main(int argc, char **argv)
 
         MPI_Barrier(gcomm);
         MPI_Finalize;
+
+        free(data);
 
         return 0;
 }

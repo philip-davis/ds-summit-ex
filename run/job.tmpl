@@ -10,13 +10,15 @@ export PATH=$PATH:${DSPACES_ROOT}/bin:../src
 
 rm -f conf.*
 
-jsrun -n 1 -a 1 -r 1 -c 1 dataspaces_server -s 1 &
+jsrun -n 1 -a 1 -r 1 -c 1 dataspaces_server -s 1 &> server.log &
 
 while [ ! -f conf.0 ]; do
     sleep 1s
 done
 
-jsrun -n 1 -a 1 -r 1 -c 1 put &> put.log &
-jsrun -n 1 -a 1 -r 1 -c 1 get &> get.log &
+sleep 5
+
+jsrun -n 2 -a 1 -r 2 -c 1 put 3 10 &> put.log &
+jsrun -n 2 -a 1 -r 2 -c 1 get 3 10 &> get.log &
 
 wait
